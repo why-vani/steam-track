@@ -3,38 +3,49 @@ import requests
 
 st.set_page_config(page_title="Steam Price Stalker", page_icon="🎮")
 st.title("🎮 Steam Game Price Stalker (India)")
-st.write("Now tracking in ₹ (INR) for your university project.")
 
 # 1. Input for Game Name
-game_name = st.text_input("Enter Game Name (e.g., 'Grand Theft Auto V'):")
+game_name = st.text_input("Enter Game Name (e.g., 'Cyberpunk 2077'):")
 
 if game_name:
-    # 2. Find the Game ID (AppID)
-    # We use a more general search first to ensure we find the game
+    # 2. Get AppID (Broad search works best for regional stores)
     search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=english"
     search_res = requests.get(search_url).json()
 
     if search_res and search_res.get('total', 0) > 0:
-        game_data = search_res['items'][0]
-        app_id = game_data['id']
-        name = game_data['name']
+        game = search_res['items'][0]
+        app_id = str(game['id'])
         
-        # 3. Get detailed Price Info - Specifically forcing India region (cc=in)
+        # 3. Get Indian Price Data
         price_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=in"
         price_res = requests.get(price_url).json()
         
-        # Safety check: ensure the app_id exists in the response
-        if str(app_id) in price_res and price_res[str(app_id)]['success']:
-            data = price_res[str(app_id)]['data']
-            
-            st.header(f"Results for: {name}")
+        # Safety Check: Does the data actually exist?
+        if price_res and price_res.get(app_id, {}).get('success'):
+            data = price_res[app_id]['data']
+            st.header(data.get('name', 'Game Found'))
             st.image(data.get('header_image', ''))
             
-            # Check if 'price_overview' exists (paid games)
+            # 4. Smart Price Display
             if 'price_overview' in data:
-                current_price = data['price_overview']['final_formatted']
-                discount = data['price_overview']['discount_percent']
+                # This pulls the ₹ formatted price directly from Steam
+                price_inr = data['price_overview'].get('final_formatted', 'Price Unknown')
+                discount = data['price_overview'].get('discount_percent', 0)
                 
+                col1, col2 = st.columns(2)
+                col1.metric("Current Price (INR)", price_inr)
+                col2.metric("Discount", f"{discount}%")
+                
+                if discount > 0:
+                    st.balloons()
+                    st.success(f"🔥 SALE! Currently {discount}% off on the Indian Store!")
+            else:
+                # Some games like CS2 or Dota 2 don't have a 'price_overview'
+                st.info("This game is either Free to Play or the Indian price hasn't been set yet.")
+        else:
+            st.error("Steam is having trouble loading Indian regional data for this game.")
+    else:
+        st.warning("Could not find that game. Try a more specific title.")                
                 col1, col2 = st.columns(2)
                 col1.metric("Current Price (India)", current_price)
                 col2.metric("Discount", f"{discount}%")
