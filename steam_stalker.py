@@ -46,6 +46,15 @@ if game_name:
         st.error("Could not find that game. Check the spelling!")                col2.metric("Discount", f"{discount}%")
                 
                 if discount > 0:
+                    st.success(f"🔥 SALE ALERT! {name} is currently {discount}% off!")
+                else:
+                    st.info("Full price right now. Maybe wait for a Summer Sale?")
+            else:
+                st.write("This game appears to be Free to Play!")
+    else:
+        st.error("Could not find that game. Check the spelling!")                col2.metric("Discount", f"{discount}%")
+                
+                if discount > 0:
                     st.success(f"🔥 SALE ALERT! {name} is currently {discount}% off in India!")
                 else:
                     st.info("Currently at full price in the Indian Store.")
