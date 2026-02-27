@@ -1,40 +1,66 @@
 import streamlit as st
 import requests
 
-st.set_page_config(page_title="Steam Price Stalker", page_icon="🎮")
-st.title("🎮 Steam Game Price Stalker (India)")
+st.set_page_config(page_title="Steam Stalker", page_icon="🎮")
+st.title("🎮 Steam Game Price Stalker")
 
-# 1. Input for Game Name
-game_name = st.text_input("Enter Game Name (e.g., 'Cyberpunk 2077'):")
+# 1. Sidebar for Currency Conversion
+st.sidebar.header("Settings")
+currency_mode = st.sidebar.radio("Display Price In:", ["USD ($)", "INR (₹)"])
+# Current exchange rate for Feb 2026 - You can change this number
+exchange_rate = 86.50 
+
+# 2. Input Box
+game_name = st.text_input("Enter Game Name (e.g., 'Elden Ring'):")
 
 if game_name:
-    # 2. Get AppID (Broad search works best for regional stores)
-    search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=english"
-    search_res = requests.get(search_url).json()
+    try:
+        # Search for the game ID using US store (most stable)
+        search_url = f"https://store.steampowered.com/api/storesearch/?term={game_name}&l=english&cc=US"
+        search_res = requests.get(search_url).json()
 
-    if search_res and search_res.get('total', 0) > 0:
-        game = search_res['items'][0]
-        app_id = str(game['id'])
-        
-        # 3. Get Indian Price Data
-        price_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=in"
-        price_res = requests.get(price_url).json()
-        
-        # Safety Check: Does the data actually exist?
-        if price_res and price_res.get(app_id, {}).get('success'):
-            data = price_res[app_id]['data']
-            st.header(data.get('name', 'Game Found'))
-            st.image(data.get('header_image', ''))
+        if search_res and search_res.get('total', 0) > 0:
+            game = search_res['items'][0]
+            app_id = str(game['id'])
             
-            # 4. Smart Price Display
-            if 'price_overview' in data:
-                # This pulls the ₹ formatted price directly from Steam
-                price_inr = data['price_overview'].get('final_formatted', 'Price Unknown')
-                discount = data['price_overview'].get('discount_percent', 0)
+            # Get US Price Data
+            price_url = f"https://store.steampowered.com/api/appdetails?appids={app_id}&cc=US"
+            price_res = requests.get(price_url).json()
+            
+            if price_res and price_res.get(app_id, {}).get('success'):
+                data = price_res[app_id]['data']
+                st.header(data.get('name', 'Game Found'))
+                st.image(data.get('header_image', ''))
                 
-                col1, col2 = st.columns(2)
-                col1.metric("Current Price (INR)", price_inr)
-                col2.metric("Discount", f"{discount}%")
+                if 'price_overview' in data:
+                    # Get the raw numeric price (in cents, e.g., 5999 for $59.99)
+                    raw_price_usd = data['price_overview'].get('final', 0) / 100
+                    discount = data['price_overview'].get('discount_percent', 0)
+                    
+                    # 3. Handle the Conversion Logic
+                    if currency_mode == "INR (₹)":
+                        final_price = raw_price_usd * exchange_rate
+                        display_text = f"₹{final_price:,.2f}"
+                        label = "Converted Price (INR)"
+                    else:
+                        display_text = f"${raw_price_usd:.2f}"
+                        label = "Current Price (USD)"
+                    
+                    col1, col2 = st.columns(2)
+                    col1.metric(label, display_text)
+                    col2.metric("Discount", f"{discount}%")
+                    
+                    if discount > 0:
+                        st.success(f"🔥 SALE ALERT! {discount}% off on Steam!")
+                else:
+                    st.info("This game appears to be Free to Play!")
+            else:
+                st.error("Could not fetch price data from Steam.")
+        else:
+            st.warning("Game not found. Try a more specific title.")
+            
+    except Exception as e:
+        st.error(f"App Error: {e}")                col2.metric("Discount", f"{discount}%")
                 
                 if discount > 0:
                     st.balloons()
