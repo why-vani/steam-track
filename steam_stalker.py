@@ -5,7 +5,7 @@ st.set_page_config(page_title="Steam Price Stalker", page_icon="🎮")
 st.title("🎮 Steam Game Price Stalker (India)")
 st.write("Track prices in ₹ (INR) for your university project.")
 
-# 1. Input for Game Name
+# 1. Input for Game Name (don't u dare fkn type minecraft)
 game_name = st.text_input("Enter Game Name (e.g., 'Elden Ring'):")
 
 if game_name:
